@@ -1,7 +1,0 @@
-{
-    "ticket_id": "SEC-2026-001",
-    "timestamp": "2026-06-17T23:18:00Z",
-    "severity": "CRITICAL",
-    "incident_summary": "Unauthorized AWS CloudTrail StopLogging API call detected from external IP.",
-    "status": "OPEN"
-}
