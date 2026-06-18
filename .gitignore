@@ -1,3 +1,21 @@
 logs_dataset_source.json
 active_tickets/
+
+# Secret Environment Variables (CRITICAL)
 .env
+
+# Python Environment & Bytecode Noise
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Local Telemetry & Log Files
+*.log
+scanner_operations.log
+
+# Operating System Noise
+.DS_Store
+Thumbs.db
