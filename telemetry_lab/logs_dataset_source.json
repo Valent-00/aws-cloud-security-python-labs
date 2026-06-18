@@ -1,0 +1,52 @@
+[
+    {
+        "eventTime": "2025-06-01T08:15:00Z",
+        "eventName": "DescribeInstances",
+        "sourceIPAddress": "192.168.1.45",
+        "userIdentity": {
+            "type": "IAMUser",
+            "userName": "valent_staff"
+        },
+        "errorCode": "None"
+    },
+    {
+        "eventTime": "2025-06-01T09:02:34Z",
+        "eventName": "ConsoleLogin",
+        "sourceIPAddress": "203.0.113.115",
+        "userIdentity": {
+            "type": "IAMUser",
+            "userName": "compromised_admin"
+        },
+        "errorCode": "None"
+    },
+    {
+        "eventTime": "2025-06-01T09:05:11Z",
+        "eventName": "DescribeInstances",
+        "sourceIPAddress": "203.0.113.115",
+        "userIdentity": {
+            "type": "IAMUser",
+            "userName": "compromised_admin"
+        },
+        "errorCode": "None"
+    },
+    {
+        "eventTime": "2025-06-01T09:12:47Z",
+        "eventName": "CreateUser",
+        "sourceIPAddress": "203.0.113.115",
+        "userIdentity": {
+            "type": "IAMUser",
+            "userName": "compromised_admin"
+        },
+        "errorCode": "None"
+    },
+    {
+        "eventTime": "2025-06-01T09:18:05Z",
+        "eventName": "StopLogging",
+        "sourceIPAddress": "203.0.113.115",
+        "userIdentity": {
+            "type": "IAMUser",
+            "userName": "compromised_admin"
+        },
+        "errorCode": "None"
+    }
+]
