@@ -1,0 +1,26 @@
+[
+    {
+        "username": "admin_root",
+        "mfa_enabled": false,
+        "key_age_days": 115,
+        "role": "Administrator"
+    },
+    {
+        "username": "intern_dev01",
+        "mfa_enabled": false,
+        "key_age_days": 12,
+        "role": "Developer"
+    },
+    {
+        "username": "contractor_sec",
+        "mfa_enabled": false,
+        "key_age_days": 45,
+        "role": "SecurityAuditor"
+    },
+    {
+        "username": "stale_deployer",
+        "mfa_enabled": false,
+        "key_age_days": 210,
+        "role": "DevOps"
+    }
+]
