@@ -1,0 +1,34 @@
+{
+    "scan_timestamp": "2026-06-19_16-37-34",
+    "total_findings": 5,
+    "high_risk_count": 2,
+    "findings": [
+        {
+            "username": "admin_root",
+            "alert_type": "MFA Disabled",
+            "risk_score": 75
+        },
+        {
+            "username": "admin_root",
+            "alert_type": "Stale Key",
+            "risk_score": 68,
+            "key_age_days": 115
+        },
+        {
+            "username": "intern_dev01",
+            "alert_type": "MFA Disabled",
+            "risk_score": 50
+        },
+        {
+            "username": "stale_deployer",
+            "alert_type": "MFA Disabled",
+            "risk_score": 50
+        },
+        {
+            "username": "stale_deployer",
+            "alert_type": "Stale Key",
+            "risk_score": 99,
+            "key_age_days": 210
+        }
+    ]
+}

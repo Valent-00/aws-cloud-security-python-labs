@@ -1,0 +1,37 @@
+**Incident Report: High-Risk IAM Alerts**
+
+**Date:** [Current Date]
+**Time:** [Current Time]
+**Severity:** High
+
+**Summary:**
+Two high-risk Identity and Access Management (IAM) alerts have been detected, indicating potential security incidents. This report provides a concise overview of the incidents and their impact on our system.
+
+**Incident 1: MFA Disabled for Admin Root User**
+
+* **Alert Details:**
+ + Username: admin_root
+ + Alert Type: MFA Disabled
+ + Risk Score: 75
+* **Analysis:** The MFA (Multi-Factor Authentication) feature for the admin_root user has been disabled. This may compromise the security of our system, as this user is responsible for managing and configuring IAM policies.
+
+**Incident 2: Stale Key Detected**
+
+* **Alert Details:**
+ + Username: stale_deployer
+ + Alert Type: Stale Key
+ + Risk Score: 99
+* **Analysis:** A stale key has been detected for the stale_deployer user. This indicates that the user's access credentials are outdated and may be vulnerable to exploitation.
+
+**Recommendations:**
+
+1. Immediately re-enable MFA for the admin_root user.
+2. Promptly investigate and update the stale Deployer user's credentials.
+3. Schedule a review of IAM policies and procedures to prevent similar incidents in the future.
+
+**Next Steps:**
+Review this incident report with our technical team and implement recommended actions to ensure the security of our system. Provide an update on the status of these incidents and any subsequent actions taken within [Timeframe].
+
+**Incident Classification:** High-Risk IAM Alert
+
+**Incident Severity:** High

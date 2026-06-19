@@ -12,12 +12,6 @@
         "role": "Developer"
     },
     {
-        "username": "contractor_sec",
-        "mfa_enabled": false,
-        "key_age_days": 45,
-        "role": "SecurityAuditor"
-    },
-    {
         "username": "stale_deployer",
         "mfa_enabled": false,
         "key_age_days": 210,
