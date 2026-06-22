@@ -1,0 +1,132 @@
+[
+    {
+        "username": "admin_root",
+        "role": "Administrator",
+        "mfa_enabled": false,
+        "active_key_count": 2,
+        "key_age_days": 115,
+        "key_last_used_days": 5,
+        "password_age_days": 100,
+        "last_login_days": 45,
+        "account_enabled": true,
+        "permissions": [
+            "s3:*",
+            "ec2:*",
+            "iam:*"
+        ],
+        "last_login_hour": 14,
+        "known_countries": [
+            "Malaysia"
+        ],
+        "last_login_country": "Malaysia",
+        "failed_logins_24h": 0,
+        "is_root": false
+    },
+    {
+        "username": "intern_dev01",
+        "role": "Developer",
+        "mfa_enabled": false,
+        "active_key_count": 1,
+        "key_age_days": 12,
+        "key_last_used_days": -1,
+        "password_age_days": 10,
+        "last_login_days": 1,
+        "account_enabled": true,
+        "permissions": [
+            "s3:GetObject",
+            "ec2:DescribeInstances"
+        ],
+        "last_login_hour": 2,
+        "known_countries": [
+            "Malaysia"
+        ],
+        "last_login_country": "Malaysia",
+        "failed_logins_24h": 3,
+        "is_root": false
+    },
+    {
+        "username": "stale_deployer",
+        "role": "DevOps",
+        "mfa_enabled": false,
+        "active_key_count": 1,
+        "key_age_days": 210,
+        "key_last_used_days": -1,
+        "password_age_days": 210,
+        "last_login_days": 95,
+        "account_enabled": false,
+        "permissions": [
+            "ec2:*",
+            "s3:*"
+        ],
+        "last_login_hour": 10,
+        "known_countries": [
+            "Malaysia"
+        ],
+        "last_login_country": "Malaysia",
+        "failed_logins_24h": 0,
+        "is_root": false
+    },
+    {
+        "username": "svc_pipeline",
+        "role": "Developer",
+        "mfa_enabled": true,
+        "active_key_count": 1,
+        "key_age_days": 30,
+        "key_last_used_days": 1,
+        "password_age_days": 30,
+        "last_login_days": 0,
+        "account_enabled": true,
+        "permissions": [
+            "*:*"
+        ],
+        "last_login_hour": 9,
+        "known_countries": [
+            "Malaysia"
+        ],
+        "last_login_country": "Malaysia",
+        "failed_logins_24h": 0,
+        "is_root": false
+    },
+    {
+        "username": "finance_mgr",
+        "role": "Developer",
+        "mfa_enabled": true,
+        "active_key_count": 1,
+        "key_age_days": 20,
+        "key_last_used_days": 2,
+        "password_age_days": 20,
+        "last_login_days": 0,
+        "account_enabled": true,
+        "permissions": [
+            "s3:GetObject"
+        ],
+        "last_login_hour": 11,
+        "known_countries": [
+            "Malaysia"
+        ],
+        "last_login_country": "Russia",
+        "failed_logins_24h": 15,
+        "is_root": false
+    },
+    {
+        "username": "root",
+        "role": "Root",
+        "mfa_enabled": true,
+        "active_key_count": 0,
+        "key_age_days": 0,
+        "key_last_used_days": -1,
+        "password_age_days": 365,
+        "last_login_days": 1,
+        "account_enabled": true,
+        "permissions": [
+            "*:*"
+        ],
+        "last_login_hour": 3,
+        "known_countries": [
+            "Malaysia"
+        ],
+        "last_login_country": "Malaysia",
+        "failed_logins_24h": 0,
+        "is_root": true
+    }
+]

@@ -1,6 +1,0 @@
-{
-    "alert_type": "Defense Evasion \u2014 StopLogging",
-    "event_time": "2025-06-01T09:18:05Z",
-    "source_ip": "203.0.113.115",
-    "user": "compromised_admin"
-}
