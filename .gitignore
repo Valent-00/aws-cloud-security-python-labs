@@ -1,0 +1,45 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+node_modules/
+
+# Environment — real secrets live here; only .env.example is tracked
+.env
+*.env
+!.env.example
+
+# Logs
+*.log
+
+# Databases
+*.db
+*.sqlite3
+backend/data/
+
+# Scanner runtime state — L-1: baseline snapshot of real IAM inventory
+# (usernames, permissions, login metadata) must never be committed
+backend/scanner/state/
+shared/state/
+
+# Reports — scan output contains the real AWS account ID and live findings
+reports/
+lambda-deployment/report.txt
+
+# Build
+dist/
+build/
+lambda-deployment/build/
+*.zip
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
