@@ -1,48 +1,40 @@
-# 🛡️ IAM Security Scanner
+# IAM Security Scanner
 
-A full-stack **Cloud Identity & Access Management (IAM) Security Posture Scanner** with an AI-powered incident reporting dashboard.
+A full-stack **Cloud IAM Security Posture Management (CSPM)** platform: it inventories IAM user accounts (mock data or a live AWS account), runs 13+ security detectors against them, maps findings to MITRE ATT&CK, and surfaces everything in an authenticated React dashboard with AI-generated executive reports and real-time Slack / Microsoft Teams alerting.
 
+Built as a Bachelor's-level cybersecurity final-year project. Detection logic is modelled on real-world CSPM frameworks including AWS Security Hub, Microsoft Defender for Cloud, and the CIS Benchmarks for IAM.
 
+---
 
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
+## Contents
+
+- [Key Features](#key-features)
 - [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Running the Application](#running-the-application)
-- [Enabling AI Reports (Ollama)](#enabling-ai-reports-ollama)
+- [Getting Started](#getting-started)
+- [Creating an Analyst Account](#creating-an-analyst-account)
+- [Scanning a Real AWS Account](#scanning-a-real-aws-account)
+- [Optional Integrations](#optional-integrations)
 - [API Reference](#api-reference)
-- [Security Detectors](#security-detectors)
 - [Configuration](#configuration)
-- [Known Limitations](#known-limitations)
+- [Testing](#testing)
+- [AWS Lambda Deployment](#aws-lambda-deployment)
+- [Security](#security)
 
 ---
 
-## Overview
+## Key Features
 
-This project simulates a production-grade **Cloud Security Posture Management (CSPM)** tool, covering the full pipeline from telemetry ingestion to incident response. It was built as a Bachelor's-level cybersecurity portfolio project.
+### Detection engine
 
-The scanner monitors IAM user accounts for:
-- Credential hygiene issues (MFA, key rotation, password age)
-- Behavioural anomalies (off-hours logins, geo anomalies, brute force)
-- Privilege risks (dormant admins, wildcard permissions, root usage)
-- Configuration drift (role escalation, MFA regression between scans)
-
-All findings are deduplicated across runs, severity-classified, and surfaced in a React dashboard with inline analyst workflow (acknowledge / review).
-
----
-
-## Features
-
-### Detection Engine (13 checks)
+Thirteen detectors plus field-level drift detection, each producing severity-banded, MITRE-mapped findings:
 
 | Check | Severity | Description |
 |---|---|---|
 | MFA Disabled | Medium–High | Account has no multi-factor authentication |
-| Stale Key | Low–Critical | API key older than rotation policy limit |
-| Never Used Key | Low | Key created but never called — orphaned attack surface |
+| Stale Key | Low–Critical | API key older than the rotation policy limit |
+| Never-Used Key | Low | Key created but never called — orphaned attack surface |
 | Multiple Active Keys | Low–Medium | User holds more than the allowed number of keys |
 | No Password Rotation | Medium–Critical | Password exceeds maximum age policy |
 | Dormant Admin | High | Privileged account with no login in N days |
@@ -50,363 +42,336 @@ All findings are deduplicated across runs, severity-classified, and surfaced in 
 | Disabled Account With Key | Medium–High | Disabled account still holds an active API key |
 | Wildcard Permission | High | IAM policy contains `*:*` — violates least privilege |
 | Root Account Used | Critical | Cloud root account logged in recently |
-| Brute Force Indicator | Medium–High | Failed logins exceed threshold in 24h |
+| Brute Force Indicator | Medium–High | Failed logins exceed threshold in 24 h |
 | Off-Hours Login | Low | Login outside configured business hours |
-| Geo Anomaly | High | Login from a country not in the user's baseline |
+| Geo Anomaly | High | Login from a country outside the user's baseline |
+| Field-Level Drift | varies | MFA flips, role escalations, key-age jumps between scans |
 
-### Platform Features
+### Platform
 
-- **Severity bands** — Critical / High / Medium / Low / Info with SLA targets
-- **Alert deduplication** — SHA-256 fingerprinting suppresses repeat alerts
-- **Field-level drift detection** — catches MFA flips, role escalations between scans
-- **Async scanning** — POST triggers background job, frontend polls for completion
-- **AI executive reports** — Ollama LLM generates professional incident summaries
-- **Analyst workflow** — acknowledge findings with notes, revert acknowledgements
-- **Structured JSON export** — machine-readable output for SIEM ingestion
-- **Scan history** — full audit trail of every scan run with severity breakdown
-
----
-
-## Tech Stack
-
-### Backend
-| Technology | Version | Purpose |
-|---|---|---|
-| Python | 3.10+ | Core language |
-| FastAPI | 0.115 | REST API framework |
-| Uvicorn | 0.30 | ASGI server |
-| SQLAlchemy | 2.0 | ORM + database abstraction |
-| SQLite | built-in | Persistent storage (zero config) |
-| Pydantic | 2.9 | Request/response validation |
-| python-dotenv | 1.0 | Environment variable management |
-| Requests | 2.32 | Ollama HTTP client |
-
-### Frontend
-| Technology | Version | Purpose |
-|---|---|---|
-| React | 18.3 | UI framework |
-| Vite | 5.4 | Build tool and dev server |
-| Tailwind CSS | 3.4 | Utility-first styling |
-| React Router | 6.26 | Client-side routing |
-| Axios | 1.7 | HTTP client |
-| Recharts | 2.12 | Chart components |
-
-### AI / LLM
-| Technology | Purpose |
-|---|---|
-| Ollama | Local LLM inference server |
-| llama3.2 | Model used for incident report generation |
+- **Authenticated analyst workflow** — JWT login (httpOnly cookie, bcrypt-hashed passwords, rate-limited), acknowledge/revert findings with notes. No self-registration; accounts are provisioned out-of-band.
+- **Real AWS mode** — swap the mock inventory for live `boto3` IAM + CloudTrail data with a single environment flag.
+- **Alert deduplication** — SHA-256 fingerprinting so only *new* state changes fire alerts across runs.
+- **MITRE ATT&CK analytics** — risk trend, technique coverage, and alert-type breakdown charts.
+- **AI executive reports** — optional local LLM (Ollama) turns raw findings into professional incident summaries.
+- **Real-time notifications** — Critical/High findings pushed to Slack and Microsoft Teams (Workflows webhooks).
+- **S3 report archive** — browse and diff historical scan reports stored in S3 by the Lambda scanner.
+- **Scheduled cloud scanning** — AWS Lambda + EventBridge deployment runs the same engine daily, unattended.
+- **Structured JSON export** — machine-readable findings for SIEM ingestion.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     React Frontend                          │
-│  Dashboard │ Findings │ Users │ Scan History                │
-│            (Vite dev server — port 5173)                    │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ HTTP (Axios)
-                       ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    FastAPI Backend                          │
-│                    (Uvicorn — port 8000)                    │
-│                                                             │
-│   POST /api/v1/scans ──► Background Thread                 │
-│   GET  /api/v1/scans/{id}/status                           │
-│   GET  /api/v1/dashboard                                   │
-│   GET  /api/v1/findings                                    │
-│   PATCH /api/v1/findings/{id}/acknowledge                  │
-└──────┬───────────────────────────┬──────────────────────────┘
-       │ SQLAlchemy                │ HTTP
-       ▼                           ▼
-┌─────────────┐           ┌─────────────────┐
-│   SQLite    │           │   Ollama LLM    │
-│  Database   │           │  (port 11434)   │
-│             │           │  llama3.2 model │
-│ scan_runs   │           └─────────────────┘
-│ findings    │
-│ alert_state │
-└─────────────┘
-       ▲
-       │
-┌─────────────────────────────────────────────────────────────┐
-│              IAM Scanner Engine (Python)                    │
-│                                                             │
-│  fetch_cloud_inventory()   ← swap for real SDK here        │
-│  run_all_checks()                                           │
-│  ├── 13 detector functions                                  │
-│  ├── detect_field_level_drift()                             │
-│  └── deduplicate_findings()   ← SHA-256 fingerprinting     │
-│  generate_ai_summary()     ← calls Ollama                  │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│                       React Frontend  (port 5173)             │
+│  Login │ Dashboard │ Findings │ Users │ Analytics │           │
+│  Scan History │ AWS Reports                                   │
+└───────────────────────────┬───────────────────────────────────┘
+                            │ HTTPS (Axios, httpOnly JWT cookie)
+                            ▼
+┌───────────────────────────────────────────────────────────────┐
+│                  FastAPI Backend  (port 8000)                 │
+│  auth (JWT/bcrypt/rate-limit) │ scans │ dashboard │           │
+│  analytics (MITRE) │ users │ findings │ s3-reports            │
+└───────┬──────────────────┬──────────────────┬─────────────────┘
+        │ SQLAlchemy       │ boto3 (optional) │ HTTP (optional)
+        ▼                  ▼                  ▼
+  ┌──────────┐   ┌──────────────────┐   ┌─────────────┐
+  │  SQLite  │   │ AWS IAM /        │   │ Ollama LLM  │
+  │ database │   │ CloudTrail / S3  │   │ (port 11434)│
+  └──────────┘   └──────────────────┘   └─────────────┘
+        ▲
+        │ shared engine (shared/)
+┌───────┴───────────────────────────────────────────────────────┐
+│  Scanner Engine — 13 detectors, drift detection, dedup,       │
+│  risk scoring, MITRE mapping, Slack/Teams notifications       │
+│  (also packaged into an AWS Lambda for daily scheduled scans) │
+└───────────────────────────────────────────────────────────────┘
 ```
+
+The detection engine lives in `shared/` and is consumed by **both** the FastAPI backend (on-demand scans from the dashboard) and the AWS Lambda (daily scheduled scans) — one codebase, two runtimes.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.10+, FastAPI, Uvicorn, SQLAlchemy 2, Pydantic 2, SQLite |
+| Auth | PyJWT (httpOnly cookie), bcrypt, slowapi (rate limiting) |
+| Cloud | boto3 (IAM, CloudTrail, S3), AWS Lambda + EventBridge |
+| Frontend | React 18, Vite 5, Tailwind CSS 3, React Router 6, Axios, Recharts |
+| AI (optional) | Ollama running `llama3.2` locally |
+| Alerting (optional) | Slack Incoming Webhooks, Microsoft Teams Workflows webhooks |
 
 ---
 
 ## Project Structure
 
 ```
-iam-scanner/
-│
-├── .gitignore
-├── README.md
-│
+IAM-Scanner2/
 ├── backend/
-│   ├── main.py                     # FastAPI app — all routes
+│   ├── main.py                 # FastAPI app — all routes
 │   ├── requirements.txt
-│   ├── .env.example                # Copy to .env and configure
-│   │
-│   ├── scanner/
-│   │   ├── __init__.py
-│   │   └── api_mock_scanner.py     # Detection engine (13 checks)
-│   │
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── database.py             # SQLAlchemy models + DB init
-│   │
-│   └── schemas/
-│       ├── __init__.py
-│       └── schemas.py              # Pydantic request/response schemas
+│   ├── .env.example            # Copy to .env and configure
+│   ├── auth/                   # JWT + bcrypt authentication
+│   ├── cloud/                  # boto3 IAM inventory, CloudTrail, S3 reports
+│   ├── analytics/              # MITRE coverage, risk trend aggregation
+│   ├── notifications/          # Slack / Teams alert senders
+│   ├── models/                 # SQLAlchemy models + DB init
+│   ├── schemas/                # Pydantic request/response schemas
+│   ├── scanner/                # Scan orchestration (engine lives in shared/)
+│   ├── scripts/
+│   │   ├── create_analyst.py   # Provision analyst login accounts
+│   │   ├── clear_alert_state.py
+│   │   └── backfill_mitre_mapping.py
+│   └── tests/                  # pytest suite (12 modules)
 │
-└── frontend/
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js              # Dev proxy → backend port 8000
-    ├── tailwind.config.js
-    ├── postcss.config.js
-    │
-    └── src/
-        ├── App.jsx                 # Root component + router + nav
-        ├── main.jsx
-        ├── index.css
-        │
-        ├── api/
-        │   └── client.js           # Axios instance + all API calls
-        │
-        ├── components/
-        │   ├── SeverityBadge.jsx   # Colour-coded severity pill
-        │   ├── FindingCard.jsx     # Single finding with ack action
-        │   ├── ScanTrigger.jsx     # Run Scan button + polling
-        │   └── AiReportPanel.jsx   # Collapsible AI report
-        │
-        └── pages/
-            ├── Dashboard.jsx       # Landing page — severity cards
-            ├── Findings.jsx        # Full findings table + filter
-            ├── UserDetail.jsx      # Per-user drill-down
-            └── ScanHistory.jsx     # Past scans + audit trail
+├── shared/                     # Detection engine shared by backend + Lambda
+│   ├── scanner_engine.py       # 13 detectors, drift, dedup, orchestration
+│   ├── detectors.py            # Public detector API
+│   ├── scoring.py              # Risk scoring
+│   ├── boto3_inventory.py      # Real AWS inventory fetcher
+│   └── notifications.py        # Webhook alerting
+│
+├── frontend/
+│   ├── vite.config.js          # Dev proxy → backend port 8000
+│   └── src/
+│       ├── api/client.js       # Axios instance + all API calls
+│       ├── components/         # SeverityBadge, FindingCard, ScanTrigger, AiReportPanel
+│       └── pages/              # Login, Dashboard, Findings, UserDetail,
+│                               # Analytics, ScanHistory, AwsReports
+│
+├── lambda-deployment/
+│   ├── lambda_function.py      # Lambda entry point (daily EventBridge scans → S3)
+│   ├── deploy.sh
+│   └── iam_execution_role.json # Least-privilege execution role
+│
+├── SECURITY.md                 # Security posture: controls, accepted risks
+└── README.md
 ```
 
 ---
 
-## Prerequisites
+## Getting Started
 
-Before you begin, ensure you have:
+### Prerequisites
 
-| Requirement | Version | Check command |
+| Requirement | Version | Check |
 |---|---|---|
-| Python | 3.10 or above | `python --version` |
-| Node.js | 18 or above | `node --version` |
-| npm | 8 or above | `npm --version` |
-| Git | Any | `git --version` |
-| Ollama (optional) | Any | `ollama --version` |
+| Python | 3.10+ | `python --version` |
+| Node.js | 18+ | `node --version` |
+| npm | 8+ | `npm --version` |
+| Ollama *(optional — AI reports)* | any | `ollama --version` |
+| AWS credentials *(optional — real scans)* | — | `aws sts get-caller-identity` |
 
----
-
-## Installation
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/iam-scanner.git
-cd iam-scanner
-```
-
-### 2. Backend setup
+### 1. Backend
 
 ```bash
 cd backend
 
-# Create and activate virtual environment
 python -m venv venv
+venv\Scripts\activate            # Windows
+# source venv/bin/activate       # macOS / Linux
 
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Create your .env file
+# Configure environment — NEVER commit the resulting .env
 cp .env.example .env
 ```
 
-### 3. Frontend setup
+Edit `backend/.env` and set at minimum a strong `JWT_SECRET_KEY` (e.g. `python -c "import secrets; print(secrets.token_urlsafe(64))"`).
+
+### 2. Frontend
 
 ```bash
-cd ../frontend
-
-# Install dependencies
+cd frontend
 npm install
-
-# Create frontend env file
-echo "VITE_API_BASE_URL=" > .env
+cp .env.example .env             # defaults use the Vite dev proxy — no edits needed
 ```
 
----
-
-## Running the Application
-
-You need **two terminals** running simultaneously (three if using Ollama).
-
-### Terminal 1 — Backend
+### 3. Run (two terminals)
 
 ```bash
+# Terminal 1 — backend
 cd backend
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # macOS / Linux
-
+venv\Scripts\activate
 uvicorn main:app --reload --port 8000
-```
 
-Expected output:
-```
-INFO: Uvicorn running on http://127.0.0.1:8000
-INFO: Application startup complete.
-```
-
-### Terminal 2 — Frontend
-
-```bash
+# Terminal 2 — frontend
 cd frontend
 npm run dev
 ```
 
-Expected output:
-```
-VITE v5.x  ready in Xms
-➜  Local: http://localhost:5173/
-```
-
-### Open the dashboard
-
-Navigate to: **http://localhost:5173**
-
-Click **Run Scan Now** on the Dashboard to trigger your first scan.
+Open **http://localhost:5173**, log in with the analyst account you create below, and click **Run Scan Now**.
 
 ---
 
-## Enabling AI Reports (Ollama)
+## Creating an Analyst Account
 
-AI-generated executive reports are optional. The scanner works fully without them.
-
-### Step 1 — Install Ollama
-
-Download from [https://ollama.com/download](https://ollama.com/download) and install.
-
-### Step 2 — Pull the model
+There is deliberately **no sign-up endpoint** — a security scanner that lets anyone self-enrol would undermine the access control it demonstrates. Accounts are provisioned out-of-band by whoever has shell access:
 
 ```bash
-ollama pull llama3.2
+cd backend
+python scripts/create_analyst.py <username>            # analyst role
+python scripts/create_analyst.py <username> --role admin
 ```
 
-This downloads approximately 2GB. Wait for it to complete.
+The password is prompted interactively (hidden input, confirmed twice).
 
-### Step 3 — Start the Ollama server
+---
+
+## Scanning a Real AWS Account
+
+By default the scanner runs against a built-in mock inventory, so the full pipeline works with zero cloud setup. To scan a live AWS account:
+
+1. Provide AWS credentials the standard way (`aws configure`, environment variables, or an instance/task role). The scanner needs read-only IAM and CloudTrail access.
+2. In `backend/.env` set:
+
+   ```ini
+   USE_REAL_AWS=true
+   AWS_DEFAULT_REGION=<your-region>
+   REPORT_BUCKET=<your-reports-bucket>   # only needed for the S3 reports page
+   ```
+
+3. Restart the backend and run a scan. `shared/boto3_inventory.py` fetches real users, keys, MFA state, and CloudTrail login events, and the same 13 detectors run against them unchanged.
+
+---
+
+## Optional Integrations
+
+### AI executive reports (Ollama)
 
 ```bash
-# Terminal 3 — keep this open
-ollama serve
+ollama pull llama3.2      # ~2 GB download
+ollama serve              # keep running in its own terminal
 ```
 
-### Step 4 — Verify
+Verify with `curl http://localhost:11434/api/tags`, then run a scan — the AI Executive Report panel populates automatically. The scanner is fully functional without Ollama.
 
-```cmd
-curl http://localhost:11434/api/tags
+### Slack / Microsoft Teams alerts
+
+Critical and High findings can be pushed to chat in real time. Set either or both in `backend/.env` (HTTPS is enforced — the senders refuse plain-HTTP URLs):
+
+```ini
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+TEAMS_WEBHOOK_URL=https://...   # Teams *Workflows* webhook (classic
+                                # Office 365 connectors were retired in 2026)
 ```
-
-Should return a JSON list of models. Now run a scan from the dashboard — the
-🤖 AI Executive Report panel will populate after the scan completes.
 
 ---
 
 ## API Reference
 
-All endpoints are prefixed with `/api/v1`. Interactive documentation is available at `http://localhost:8000/docs` when the backend is running.
+All endpoints are prefixed with `/api/v1` and (except `/health` and login) require an authenticated session. Interactive docs are served at `http://localhost:8000/docs` in development (disabled when `ENVIRONMENT=production`).
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/health` | Liveness probe |
-| `POST` | `/api/v1/scans` | Trigger a new scan (returns 202) |
-| `GET` | `/api/v1/scans` | List scan history (paginated) |
+| `POST` | `/api/v1/auth/login` | Log in — sets httpOnly JWT cookie (rate-limited 5/min/IP) |
+| `GET` | `/api/v1/auth/me` | Current session info |
+| `POST` | `/api/v1/auth/logout` | Clear session cookie |
+| `POST` | `/api/v1/scans` | Trigger a scan (returns 202, runs in background) |
+| `GET` | `/api/v1/scans` | Paginated scan history |
 | `GET` | `/api/v1/scans/{id}/status` | Poll scan status + results |
-| `GET` | `/api/v1/scans/{id}/findings` | All findings for one scan |
-| `GET` | `/api/v1/dashboard` | Aggregated summary for landing page |
+| `GET` | `/api/v1/scans/{id}/findings` | Findings for one scan |
+| `GET` | `/api/v1/dashboard` | Aggregated summary for the landing page |
+| `GET` | `/api/v1/analytics/risk-trend` | Risk score over time |
+| `GET` | `/api/v1/analytics/mitre-coverage` | Findings per MITRE ATT&CK technique |
+| `GET` | `/api/v1/analytics/alert-type-breakdown` | Findings per detector |
+| `GET` | `/api/v1/analytics/scan-stats` | Aggregate scan statistics |
 | `GET` | `/api/v1/users` | Per-user finding summary |
-| `GET` | `/api/v1/users/{username}/findings` | All findings for one user |
-| `PATCH` | `/api/v1/findings/{id}/acknowledge` | Acknowledge a finding |
-| `DELETE` | `/api/v1/findings/{id}/acknowledge` | Remove acknowledgement |
-
----
-
-## Security Detectors
-
-To connect this scanner to a real cloud provider, replace the body of
-`fetch_cloud_inventory()` in `backend/scanner/api_mock_scanner.py` with
-your real SDK call:
-
-```python
-# AWS example (requires boto3)
-import boto3
-
-def fetch_cloud_inventory() -> list[UserRecord]:
-    iam = boto3.client('iam')
-    users = iam.list_users()['Users']
-    # ... map to UserRecord schema
-    return records
-
-# GCP example (requires google-cloud-iam)
-# Azure example (requires azure-identity)
-```
-
-The rest of the scanner — all 13 detectors, deduplication, scoring, AI
-reports, and the dashboard — require no changes.
+| `GET` | `/api/v1/users/{username}/findings` | Findings for one user |
+| `GET` | `/api/v1/s3-reports` | List archived scan reports in S3 |
+| `GET` | `/api/v1/s3-reports/compare` | Diff two archived reports |
+| `GET` | `/api/v1/s3-reports/{key}` | Fetch one archived report |
+| `PATCH` | `/api/v1/findings/{id}/acknowledge` | Acknowledge a finding (with note) |
+| `DELETE` | `/api/v1/findings/{id}/acknowledge` | Revert an acknowledgement |
 
 ---
 
 ## Configuration
 
-All configuration is via environment variables in `backend/.env`.
+All configuration is via environment variables in `backend/.env` (see `backend/.env.example` for a documented template).
+
+### Core
+
+| Variable | Default | Description |
+|---|---|---|
+| `JWT_SECRET_KEY` | — *(required)* | Secret for signing session JWTs — long random string |
+| `ENVIRONMENT` | `development` | `production` disables `/docs` and enables the `Secure` cookie flag |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Session JWT lifetime |
+| `USE_REAL_AWS` | `false` | `true` scans a live AWS account instead of mock data |
+| `AWS_DEFAULT_REGION` | — | AWS region for boto3 clients |
+| `REPORT_BUCKET` | — | S3 bucket holding archived scan reports |
+| `S3_REQUIRE_ENCRYPTION` | `false` | `true` refuses to serve S3 reports not encrypted at rest |
+
+### Detector thresholds
+
+| Variable | Default | Description |
+|---|---|---|
+| `KEY_ROTATION_DAYS` | `90` | Max API key age before alert |
+| `PASSWORD_MAX_AGE_DAYS` | `90` | Max password age before alert |
+| `STALE_ACCOUNT_DAYS` | `60` | Days inactive before stale-account alert |
+| `DORMANT_ADMIN_DAYS` | `30` | Days inactive for privileged accounts |
+| `MAX_ACTIVE_KEYS_PER_USER` | `1` | Max active API keys per user |
+| `BRUTE_FORCE_THRESHOLD` | `10` | Failed logins per 24 h before alert |
+| `BUSINESS_HOURS_START` / `BUSINESS_HOURS_END` | `8` / `18` | Business-hours window (UTC) for off-hours detection |
+
+### Integrations
 
 | Variable | Default | Description |
 |---|---|---|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
-| `OLLAMA_MODEL` | `llama3.2` | LLM model name |
-| `OLLAMA_TIMEOUT_SEC` | `45` | Request timeout in seconds |
-| `KEY_ROTATION_DAYS` | `90` | Max API key age before alert |
-| `PASSWORD_MAX_AGE_DAYS` | `90` | Max password age before alert |
-| `STALE_ACCOUNT_DAYS` | `60` | Days inactive before stale account alert |
-| `DORMANT_ADMIN_DAYS` | `30` | Days inactive for privileged accounts |
-| `MAX_ACTIVE_KEYS_PER_USER` | `1` | Max active API keys per user |
-| `BRUTE_FORCE_THRESHOLD` | `10` | Failed logins per 24h before alert |
-| `BUSINESS_HOURS_START` | `8` | Start of business hours (UTC) |
-| `BUSINESS_HOURS_END` | `18` | End of business hours (UTC) |
+| `OLLAMA_MODEL` | `llama3.2` | Model for AI reports |
+| `OLLAMA_TIMEOUT_SEC` | `45` | LLM request timeout |
+| `SLACK_WEBHOOK_URL` | — | Slack Incoming Webhook (HTTPS only) |
+| `TEAMS_WEBHOOK_URL` | — | Teams Workflows webhook (HTTPS only) |
+| `DASHBOARD_URL` | — | Link embedded in chat alerts |
+
+> **Frontend:** the only frontend variable is `VITE_API_BASE_URL` (empty = use the Vite dev proxy). Vite bakes every `VITE_*` value into the public JS bundle at build time — **never** put secrets behind a `VITE_` prefix.
 
 ---
 
-## Known Limitations
+## Testing
 
-- **Mock data only** — `fetch_cloud_inventory()` returns hardcoded users. Connect a real cloud SDK to scan live accounts.
-- **No authentication** — the dashboard has no login. Do not expose port 5173 or 8000 to a public network.
-- **Single-user** — no multi-tenancy or role-based access control.
-- **SQLite** — suitable for development and portfolio use. Replace with PostgreSQL for production workloads.
-- **No scheduled scanning** — scans run on-demand via the dashboard button.
+```bash
+cd backend
+venv\Scripts\activate
+pytest
+```
+
+The suite (`backend/tests/`, 12 modules) covers authentication, scan routes, the scan worker, analytics, boto3/CloudTrail inventory, S3 report handling, notifications, and incident explanation.
+
+---
+
+## AWS Lambda Deployment
+
+The same detection engine runs as a scheduled Lambda for unattended daily scans:
+
+- `lambda-deployment/lambda_function.py` imports the shared scanner, swaps in the real boto3 inventory fetcher, runs all checks, and writes JSON + text reports to `REPORT_BUCKET`.
+- Triggered by an **EventBridge** rule (`rate(1 day)`).
+- `lambda-deployment/iam_execution_role.json` defines the least-privilege execution role.
+- `lambda-deployment/deploy.sh` builds and ships the deployment package.
+
+Improvements made to the local engine (new detectors, tuned scores, MITRE mappings) are picked up by the Lambda on the next deploy with no Lambda-specific changes.
+
+---
+
+## Security
+
+See **[SECURITY.md](SECURITY.md)** for the full security posture: implemented controls (httpOnly JWT cookies, bcrypt, login rate limiting, S3 key validation, HTTPS-only webhooks), deliberately accepted risks with rationale, and operator constraints.
+
+Golden rules:
+
+- **Never commit `.env` files** — copy `backend/.env.example` and fill in values locally. Secrets stay out of Git.
+- Scanner runtime state (`backend/scanner/state/`, the SQLite DB, scanner logs, scan reports) contains real IAM inventory data and is gitignored — keep it that way.
+- Do not expose ports 8000/5173 to a public network without a reverse proxy and TLS.
 
 ---
 
 ## Acknowledgements
 
-Built as part of a Bachelor's-level cloud security portfolio project. Detection logic is based on real-world CSPM frameworks including AWS Security Hub, Microsoft Defender for Cloud, and CIS Benchmarks for IAM.
+Built as a Bachelor's-level cloud security final-year project. Detection logic informed by AWS Security Hub, Microsoft Defender for Cloud, CIS Benchmarks for IAM, and the MITRE ATT&CK framework.
